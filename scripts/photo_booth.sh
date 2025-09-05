@@ -4,9 +4,17 @@
 # Configured for Raspberry Pi with receipt printer
 
 # Configuration
-PHOTO_DIR="${PHOTO_DIR:-~/receipts}"
-PRINTER_LIB="${PRINTER_LIB:-~/receipts/photo_booth_lib}"
-VIRTUAL_ENV="${VIRTUAL_ENV:-~/receipts/hermes/myenv}"
+# Get the script's parent directory (photo_booth root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PHOTO_BOOTH_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Set paths relative to photo_booth installation
+PHOTO_DIR="${PHOTO_DIR:-~/pics}"
+PRINTER_LIB="${PRINTER_LIB:-$PHOTO_BOOTH_ROOT}"
+VIRTUAL_ENV="${VIRTUAL_ENV:-~/myenv}"
+
+# Create photo directory if it doesn't exist
+mkdir -p "$(eval echo $PHOTO_DIR)"
 
 # Activate virtual environment if exists
 if [ -f "$VIRTUAL_ENV/bin/activate" ]; then
@@ -93,7 +101,7 @@ while true; do
         sleep 0.5
     done
     
-    cd "$PHOTO_DIR"
+    cd "$(eval echo $PHOTO_DIR)"
     
     # Take all 3 photos with different settings
     rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto
