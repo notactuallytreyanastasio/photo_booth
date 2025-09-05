@@ -235,6 +235,41 @@ img.save('/tmp/count.png')
     python "$PRINTER_LIB/scripts/imgprint.py" /tmp/count.png >/dev/null 2>&1
 }
 
+# Function to print CHEESE notification
+print_cheese() {
+    local photo_num=$1
+    echo "CHEESE printed for photo $photo_num" >> "$DEBUG_LOG"
+    python3 -c "
+from PIL import Image, ImageDraw, ImageFont
+img = Image.new('L', (576, 80), 255)
+draw = ImageDraw.Draw(img)
+try:
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 48)
+    small_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 14)
+except:
+    font = ImageFont.load_default()
+    small_font = font
+
+# Center CHEESE text
+text = 'CHEESE!'
+bbox = draw.textbbox((0, 0), text, font=font)
+text_width = bbox[2] - bbox[0]
+x_pos = (576 - text_width) // 2
+draw.text((x_pos, 10), text, font=font, fill=0)
+
+# Add photo number indicator
+if '$photo_num' != '3':
+    next_text = 'Get ready for next shot...'
+    bbox = draw.textbbox((0, 0), next_text, font=small_font)
+    text_width = bbox[2] - bbox[0]
+    x_pos = (576 - text_width) // 2
+    draw.text((x_pos, 60), next_text, font=small_font, fill=0)
+
+img.save('/tmp/cheese.png')
+"
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/cheese.png >/dev/null 2>&1
+}
+
 # Function to create SHA signature image
 create_sha_image() {
     local sha=$1
@@ -334,6 +369,10 @@ while true; do
         continue
     fi
     
+    # Print CHEESE and give time to change expression
+    print_cheese 1
+    sleep 0.5
+    
     log_both "Taking photo 2..."
     if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>> "$ERROR_LOG"; then
         log_error "Failed to capture photo2.jpg"
@@ -343,6 +382,10 @@ while true; do
         continue
     fi
     
+    # Print CHEESE and give time to change expression
+    print_cheese 2
+    sleep 0.5
+    
     log_both "Taking photo 3..."
     if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>> "$ERROR_LOG"; then
         log_error "Failed to capture photo3.jpg"
@@ -351,6 +394,9 @@ while true; do
         fi
         continue
     fi
+    
+    # Print final CHEESE
+    print_cheese 3
     
     log_both "All photos captured successfully"
     
