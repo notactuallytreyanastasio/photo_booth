@@ -26,9 +26,8 @@ SESSION_LOG="/tmp/photo_booth_session.log"
 # Create photo directory if it doesn't exist
 mkdir -p "$(eval echo $PHOTO_DIR)"
 
-# Initialize debug logging
-exec 2> >(tee -a "$ERROR_LOG")
-exec 1> >(tee -a "$DEBUG_LOG")
+# Initialize debug logging - only redirect stderr to avoid interfering with prints
+exec 2>> "$ERROR_LOG"
 
 echo "=== Photo Booth Started: $(date) ===" >> "$DEBUG_LOG"
 echo "PHOTO_DIR: $PHOTO_DIR" >> "$DEBUG_LOG"
@@ -279,6 +278,7 @@ log_error() {
 # Function to print text as image
 print_text() {
     echo "Printing text: $1" >> "$DEBUG_LOG"
+    echo "Printing text: $1"  # Also echo to console
     python3 -c "
 from PIL import Image, ImageDraw, ImageFont
 text = '''$1'''
@@ -291,13 +291,14 @@ except:
 draw.text((10, 10), text, font=font, fill=0)
 img.save('/tmp/text.png')
 "
-    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/text.png >/dev/null 2>&1
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/text.png
 }
 
 # Function to print countdown
 print_countdown() {
     local number=$1
     echo "Countdown: $number" >> "$DEBUG_LOG"
+    echo "Countdown: $number"  # Also echo to console
     python3 -c "
 from PIL import Image, ImageDraw, ImageFont
 img = Image.new('L', (576, 100), 255)
@@ -309,13 +310,14 @@ except:
 draw.text((250, 10), '$number', font=font, fill=0)
 img.save('/tmp/count.png')
 "
-    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/count.png >/dev/null 2>&1
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/count.png
 }
 
 # Function to print CHEESE notification
 print_cheese() {
     local photo_num=$1
     echo "CHEESE printed for photo $photo_num" >> "$DEBUG_LOG"
+    echo "CHEESE! Photo $photo_num captured"  # Echo to console
     python3 -c "
 from PIL import Image, ImageDraw, ImageFont
 img = Image.new('L', (576, 80), 255)
@@ -344,7 +346,7 @@ if '$photo_num' != '3':
 
 img.save('/tmp/cheese.png')
 "
-    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/cheese.png >/dev/null 2>&1
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/cheese.png
 }
 
 # Function to create SHA signature image
@@ -438,8 +440,11 @@ while true; do
     
     # Take all 3 photos with different settings
     log_both "Taking photo 1..."
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto 2>> "$ERROR_LOG"; then
+    echo "Taking photo 1..."  # Echo to console
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto; then
+        echo "ERROR: Failed to capture photo1.jpg - check camera connection!"
         log_error "Failed to capture photo1.jpg"
+        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
@@ -451,8 +456,11 @@ while true; do
     sleep 0.5
     
     log_both "Taking photo 2..."
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>> "$ERROR_LOG"; then
+    echo "Taking photo 2..."  # Echo to console
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5; then
+        echo "ERROR: Failed to capture photo2.jpg - check camera connection!"
         log_error "Failed to capture photo2.jpg"
+        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
@@ -464,8 +472,11 @@ while true; do
     sleep 0.5
     
     log_both "Taking photo 3..."
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>> "$ERROR_LOG"; then
+    echo "Taking photo 3..."  # Echo to console
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2; then
+        echo "ERROR: Failed to capture photo3.jpg - check camera connection!"
         log_error "Failed to capture photo3.jpg"
+        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
