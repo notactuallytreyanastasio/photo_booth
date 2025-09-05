@@ -41,6 +41,83 @@ if [ -f "$VIRTUAL_ENV/bin/activate" ]; then
     echo "Virtual environment activated" >> "$DEBUG_LOG"
 fi
 
+# Function to print processing log strip (for verbose mode)
+print_processing_log() {
+    local title="PROCESSING LOG $(date '+%H:%M:%S')"
+    
+    # Create processing log image with all the steps
+    python3 -c "
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
+from datetime import datetime
+
+title = '''$title'''
+processing_content = ''
+
+try:
+    with open('$SESSION_LOG', 'r') as f:
+        # Read all processing-related lines
+        lines = f.readlines()
+        processing_lines = []
+        for line in lines:
+            # Filter for processing-related messages
+            if any(keyword in line for keyword in ['Taking photo', 'captured', 'SHA', 'Processing', 'size:', 'Calculating']):
+                processing_lines.append(line.strip())
+        processing_content = '\n'.join(processing_lines)
+except:
+    processing_content = 'No processing log available'
+
+# Calculate height needed
+line_height = 10
+char_width = 70
+lines = []
+for line in processing_content.split('\n'):
+    wrapped = textwrap.wrap(line, width=char_width) or ['']
+    lines.extend(wrapped)
+
+# Add cut line at end
+lines.append('')
+lines.append('-' * 70)
+lines.append('CUT HERE')
+lines.append('-' * 70)
+
+total_height = (len(lines) + 2) * line_height + 35
+
+# Create image
+img = Image.new('L', (576, total_height), 255)
+draw = ImageDraw.Draw(img)
+
+try:
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf', 8)
+    title_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 11)
+except:
+    font = ImageFont.load_default()
+    title_font = font
+
+y_pos = 10
+# Center the title
+bbox = draw.textbbox((0, 0), title, font=title_font)
+text_width = bbox[2] - bbox[0]
+x_pos = (576 - text_width) // 2
+draw.text((x_pos, y_pos), title, font=title_font, fill=0)
+y_pos += 20
+
+for line in lines:
+    if 'CUT HERE' in line:
+        # Center the cut line
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_width = bbox[2] - bbox[0]
+        x_pos = (576 - text_width) // 2
+        draw.text((x_pos, y_pos), line, font=font, fill=0)
+    else:
+        draw.text((10, y_pos), line, font=font, fill=0)
+    y_pos += line_height
+
+img.save('/tmp/processing_log.png')
+"
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/processing_log.png
+}
+
 # Function to print session debug (for verbose mode)
 print_session_debug() {
     local session_title="SESSION DEBUG $(date '+%H:%M:%S')"
@@ -476,6 +553,12 @@ while true; do
     # Create signature
     create_signature "$DATE"
     
+    # Print processing log strip in verbose mode (before photos)
+    if [ "$VERBOSE_MODE" -eq 1 ]; then
+        log_both "Printing processing log strip..."
+        print_processing_log
+    fi
+    
     # Print Strip 1: Low light versions with SHAs
     log_both "Printing strip 1 (low light)..."
     if ! python "$PRINTER_LIB/scripts/imgprint.py" \
@@ -507,12 +590,6 @@ while true; do
     fi
     
     log_both "=== SESSION COMPLETE: $(date '+%Y-%m-%d %H:%M:%S') ==="
-    
-    # Print debug log if in verbose mode
-    if [ "$VERBOSE_MODE" -eq 1 ]; then
-        log_both "Printing session debug..."
-        print_session_debug
-    fi
     
     # Ready for next photo
     print_text "READY - PRESS ENTER TO TAKE PHOTO"
