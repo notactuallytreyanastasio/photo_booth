@@ -40,6 +40,119 @@ if [ -f "$VIRTUAL_ENV/bin/activate" ]; then
     echo "Virtual environment activated" >> "$DEBUG_LOG"
 fi
 
+# Function to check printer status
+check_printer() {
+    echo "Checking for Epson TM-M50 printer..."
+    
+    # Check USB devices for Epson printer
+    if lsusb | grep -i "epson\|04b8" > /dev/null 2>&1; then
+        echo "Found Epson USB device" >> "$DEBUG_LOG"
+        echo "✓ Epson printer detected via USB"
+        
+        # Check if printer device exists
+        if [ -c /dev/usb/lp0 ] || [ -c /dev/usb/lp1 ] || [ -c /dev/usblp0 ]; then
+            echo "Printer device node found" >> "$DEBUG_LOG"
+            return 0
+        else
+            echo "WARNING: Epson detected but no device node (/dev/usb/lp*)" >> "$DEBUG_LOG"
+            echo "! Printer detected but device not ready"
+            echo "  Try: sudo modprobe usblp"
+            return 1
+        fi
+    else
+        echo "ERROR: No Epson printer detected" >> "$DEBUG_LOG"
+        echo "✗ No Epson TM-M50 printer found!"
+        echo "  Please check:"
+        echo "  1. Printer is powered on"
+        echo "  2. USB cable is connected"
+        echo "  3. Try unplugging and reconnecting USB"
+        return 1
+    fi
+}
+
+# Function to test printer with small print
+test_printer() {
+    echo "Testing printer connection..."
+    python3 -c "
+from PIL import Image, ImageDraw, ImageFont
+img = Image.new('L', (576, 40), 255)
+draw = ImageDraw.Draw(img)
+try:
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf', 12)
+except:
+    font = ImageFont.load_default()
+draw.text((10, 10), 'Printer Test OK - $(date +%H:%M:%S)', font=font, fill=0)
+img.save('/tmp/test_print.png')
+" 2>/dev/null
+    
+    if python "$PRINTER_LIB/scripts/imgprint.py" /tmp/test_print.png 2>/dev/null; then
+        echo "✓ Printer test successful" 
+        echo "Printer test successful" >> "$DEBUG_LOG"
+        return 0
+    else
+        echo "✗ Printer test failed"
+        echo "Printer test failed" >> "$DEBUG_LOG"
+        return 1
+    fi
+}
+
+# Check printer on startup
+echo ""
+echo "=== PHOTO BOOTH STARTUP CHECK ==="
+echo ""
+
+PRINTER_READY=0
+MAX_RETRIES=3
+RETRY_COUNT=0
+
+while [ $PRINTER_READY -eq 0 ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if check_printer; then
+        if test_printer; then
+            PRINTER_READY=1
+            echo ""
+            echo "=== PRINTER READY ==="
+            echo ""
+        else
+            echo ""
+            echo "Printer found but not responding. Retrying in 3 seconds..."
+            sleep 3
+        fi
+    else
+        echo ""
+        echo "Retry $((RETRY_COUNT + 1)) of $MAX_RETRIES"
+        echo "Waiting 5 seconds before retry..."
+        echo ""
+        sleep 5
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+done
+
+if [ $PRINTER_READY -eq 0 ]; then
+    echo ""
+    echo "=== PRINTER NOT AVAILABLE ==="
+    echo "The photo booth cannot start without a printer."
+    echo ""
+    echo "Troubleshooting steps:"
+    echo "1. Check printer power and LED status"
+    echo "2. Unplug USB cable from Pi, wait 5 seconds, reconnect"
+    echo "3. Run: lsusb | grep -i epson"
+    echo "4. Run: ls -la /dev/usb/"
+    echo "5. Try: sudo modprobe usblp"
+    echo ""
+    echo "Press Ctrl+C to exit and fix the issue."
+    echo ""
+    
+    # Wait for user to fix it
+    while [ $PRINTER_READY -eq 0 ]; do
+        echo "Press ENTER to retry printer detection..."
+        read
+        if check_printer && test_printer; then
+            PRINTER_READY=1
+            echo "✓ Printer now ready!"
+        fi
+    done
+fi
+
 # Function to print processing log strip (for verbose mode)
 print_processing_log() {
     local title="PROCESSING LOG $(date '+%H:%M:%S')"
