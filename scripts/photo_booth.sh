@@ -707,16 +707,20 @@ while true; do
     
     # Reset camera module to clear any bad state
     echo "Resetting camera module..."
-    # Try to reset V4L2 devices
-    sudo modprobe -r bcm2835-v4l2 2>/dev/null
-    sudo modprobe -r bcm2835-isp 2>/dev/null
-    sleep 1
-    sudo modprobe bcm2835-v4l2 2>/dev/null
-    sudo modprobe bcm2835-isp 2>/dev/null
+    # Try to reset V4L2 devices (only if we have sudo access)
+    if [ "$EUID" -eq 0 ] || sudo -n true 2>/dev/null; then
+        sudo modprobe -r bcm2835-v4l2 2>/dev/null || true
+        sudo modprobe -r bcm2835-isp 2>/dev/null || true
+        sleep 1
+        sudo modprobe bcm2835-v4l2 2>/dev/null || true
+        sudo modprobe bcm2835-isp 2>/dev/null || true
+    else
+        echo "Skipping module reset (no sudo access)"
+    fi
     
-    # Kill any stuck camera processes
-    pkill -f rpicam 2>/dev/null
-    pkill -f libcamera 2>/dev/null
+    # Kill any stuck camera processes (these don't need sudo)
+    pkill -f rpicam 2>/dev/null || true
+    pkill -f libcamera 2>/dev/null || true
     sleep 1
     
     # Add delay for camera to initialize after reset
