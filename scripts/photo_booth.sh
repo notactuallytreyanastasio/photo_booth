@@ -15,19 +15,30 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHOTO_BOOTH_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Debug environment variable
+if [ ! -z "$PRINTER_LIB" ]; then
+    echo "WARNING: PRINTER_LIB is already set in environment to: $PRINTER_LIB"
+fi
+
 # Set paths relative to photo_booth installation
 PHOTO_DIR="${PHOTO_DIR:-~/pics}"
-PRINTER_LIB="${PRINTER_LIB:-$PHOTO_BOOTH_ROOT}"
+# Force PRINTER_LIB to be the photo_booth root, ignore environment variable for now
+PRINTER_LIB="$PHOTO_BOOTH_ROOT"
 VIRTUAL_ENV="${VIRTUAL_ENV:-~/myenv}"
 DEBUG_LOG="/tmp/photo_booth_debug.log"
 ERROR_LOG="/tmp/photo_booth_error.log"
 SESSION_LOG="/tmp/photo_booth_session.log"
 
 # Debug path resolution
+echo "=== PATH DEBUG ==="
+echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"
+echo "dirname: $(dirname "${BASH_SOURCE[0]}")"
+echo "pwd: $(pwd)"
 echo "SCRIPT_DIR: $SCRIPT_DIR"
 echo "PHOTO_BOOTH_ROOT: $PHOTO_BOOTH_ROOT"
 echo "PRINTER_LIB: $PRINTER_LIB"
 echo "Looking for imgprint.py at: $PRINTER_LIB/scripts/imgprint.py"
+echo "=================="
 
 # Verify imgprint.py exists
 if [ ! -f "$PRINTER_LIB/scripts/imgprint.py" ]; then
@@ -112,6 +123,11 @@ img.save('/tmp/test_print.png')
     
     # Try to print with full error output
     echo "Attempting to print test image..."
+    echo "DEBUG: PRINTER_LIB = $PRINTER_LIB"
+    echo "DEBUG: Full path = $PRINTER_LIB/scripts/imgprint.py"
+    echo "DEBUG: Checking if file exists..."
+    ls -la "$PRINTER_LIB/scripts/imgprint.py" 2>&1
+    
     if python "$PRINTER_LIB/scripts/imgprint.py" /tmp/test_print.png 2>&1; then
         echo "✓ Printer test successful" 
         echo "Printer test successful" >> "$DEBUG_LOG"
