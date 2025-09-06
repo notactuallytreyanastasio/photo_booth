@@ -440,6 +440,75 @@ log_error() {
     fi
 }
 
+# Function to print error alert to receipt
+print_error_alert() {
+    local error_title="$1"
+    local error_details="$2"
+    echo "PRINTING ERROR ALERT: $error_title" >> "$DEBUG_LOG"
+    echo "ERROR ALERT: $error_title"  # Echo to console
+    
+    python3 -c "
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
+from datetime import datetime
+
+title = '''ERROR ALERT'''
+error_msg = '''$error_title'''
+details = '''$error_details'''
+timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+# Calculate height
+lines = []
+lines.append('!' * 50)
+lines.append('')
+lines.append('ERROR ALERT')
+lines.append('')
+lines.extend(textwrap.wrap(error_msg, width=45))
+lines.append('')
+if details:
+    lines.extend(textwrap.wrap(details, width=45))
+    lines.append('')
+lines.append(timestamp)
+lines.append('!' * 50)
+
+line_height = 14
+total_height = len(lines) * line_height + 20
+
+# Create image
+img = Image.new('L', (576, total_height), 255)
+draw = ImageDraw.Draw(img)
+
+try:
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf', 12)
+    title_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 16)
+except:
+    font = ImageFont.load_default()
+    title_font = font
+
+y_pos = 10
+for i, line in enumerate(lines):
+    if 'ERROR ALERT' in line:
+        # Center the title
+        bbox = draw.textbbox((0, 0), line, font=title_font)
+        text_width = bbox[2] - bbox[0]
+        x_pos = (576 - text_width) // 2
+        draw.text((x_pos, y_pos), line, font=title_font, fill=0)
+    elif '!' * 10 in line:
+        # Center separator lines
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_width = bbox[2] - bbox[0]
+        x_pos = (576 - text_width) // 2
+        draw.text((x_pos, y_pos), line, font=font, fill=0)
+    else:
+        draw.text((40, y_pos), line, font=font, fill=0)
+    y_pos += line_height
+
+img.save('/tmp/error_alert.png')
+"
+    # Print the error alert
+    python "$PRINTER_LIB/scripts/imgprint.py" /tmp/error_alert.png 2>&1
+}
+
 # Function to print text as image
 print_text() {
     echo "Printing text: $1" >> "$DEBUG_LOG"
@@ -601,22 +670,24 @@ while true; do
     read
     log_both "User pressed ENTER at $(date)"
     
+    # Always give time to swap USB and position people
+    echo ""
+    echo "==================================="
+    echo "     PREPARE FOR PHOTOS!"
+    echo "==================================="
+    echo ""
+    echo "You have 5 seconds to:"
+    echo "1. Swap camera to printer USB"
+    echo "2. Position people for photo"
+    echo ""
+    for i in 5 4 3 2 1; do
+        echo "  Starting in $i..."
+        sleep 1
+    done
+    echo ""
+    
     # Check printer on first run or if it was disconnected
     if [ $PRINTER_CHECKED -eq 0 ] || [ $PRINTER_READY -eq 0 ]; then
-        echo ""
-        echo "==================================="
-        echo "     SWAP TO PRINTER NOW!"
-        echo "==================================="
-        echo ""
-        echo "You have 5 seconds to:"
-        echo "1. Unplug camera USB"
-        echo "2. Plug in printer USB"
-        echo ""
-        for i in 5 4 3 2 1; do
-            echo "  Starting printer check in $i..."
-            sleep 1
-        done
-        echo ""
         ensure_printer_ready
     fi
     
@@ -632,10 +703,11 @@ while true; do
     # Take all 3 photos with different settings
     log_both "Taking photo 1..."
     echo "Taking photo 1..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
+        CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo1.jpg - check camera connection!"
-        log_error "Failed to capture photo1.jpg"
-        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
+        log_error "Failed to capture photo1.jpg: $CAMERA_ERROR"
+        print_error_alert "CAMERA FAILURE - PHOTO 1" "$CAMERA_ERROR"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
@@ -648,10 +720,11 @@ while true; do
     
     log_both "Taking photo 2..."
     echo "Taking photo 2..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
+        CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo2.jpg - check camera connection!"
-        log_error "Failed to capture photo2.jpg"
-        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
+        log_error "Failed to capture photo2.jpg: $CAMERA_ERROR"
+        print_error_alert "CAMERA FAILURE - PHOTO 2" "$CAMERA_ERROR"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
@@ -664,10 +737,11 @@ while true; do
     
     log_both "Taking photo 3..."
     echo "Taking photo 3..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
+        CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo3.jpg - check camera connection!"
-        log_error "Failed to capture photo3.jpg"
-        print_text "ERROR: CAMERA FAILED - CHECK CONNECTION"
+        log_error "Failed to capture photo3.jpg: $CAMERA_ERROR"
+        print_error_alert "CAMERA FAILURE - PHOTO 3" "$CAMERA_ERROR"
         if [ "$VERBOSE_MODE" -eq 1 ]; then
             print_session_debug
         fi
@@ -683,6 +757,7 @@ while true; do
     for photo in photo1.jpg photo2.jpg photo3.jpg; do
         if [ ! -f "$photo" ]; then
             log_error "Photo $photo does not exist"
+            print_error_alert "PHOTO FILE MISSING" "File $photo was not created. Camera may have disconnected or failed."
             if [ "$VERBOSE_MODE" -eq 1 ]; then
                 print_session_debug
             fi
@@ -692,6 +767,7 @@ while true; do
         log_both "Photo $photo size: $size bytes"
         if [ "$size" -eq 0 ]; then
             log_error "Photo $photo is empty"
+            print_error_alert "PHOTO FILE EMPTY" "File $photo has 0 bytes. Camera capture failed."
             if [ "$VERBOSE_MODE" -eq 1 ]; then
                 print_session_debug
             fi
