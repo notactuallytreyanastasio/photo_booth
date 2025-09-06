@@ -813,8 +813,7 @@ while true; do
     log_both "SHA2: $SHA2"
     log_both "SHA3: $SHA3"
     
-    # Process photos for 3 different lighting scenarios
-    # Strip 1: Low light optimization
+    # Process photos - ONLY LOW LIGHT (first strip only)
     log_both "Processing photos for low light..."
     if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg lowlight 2>> "$ERROR_LOG"; then
         log_error "Failed to process photo1.jpg for lowlight"
@@ -824,30 +823,6 @@ while true; do
     fi
     if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg lowlight 2>> "$ERROR_LOG"; then
         log_error "Failed to process photo3.jpg for lowlight"
-    fi
-    
-    # Strip 2: Auto/normal lighting
-    log_both "Processing photos for auto lighting..."
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo1.jpg for auto"
-    fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo2.jpg for auto"
-    fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo3.jpg for auto"
-    fi
-    
-    # Strip 3: Bright light optimization
-    log_both "Processing photos for bright light..."
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg bright 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo1.jpg for bright"
-    fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg bright 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo2.jpg for bright"
-    fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg bright 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo3.jpg for bright"
     fi
     
     DATE=$(date '+%Y-%m-%d %H:%M')
@@ -866,34 +841,14 @@ while true; do
         print_processing_log
     fi
     
-    # Print Strip 1: Low light versions with SHAs
-    log_both "Printing strip 1 (low light)..."
+    # Print ONLY Strip 1: Low light versions with SHAs
+    log_both "Printing photo strip..."
     if ! python "$PRINTER_LIB/scripts/imgprint.py" \
         photo1_lowlight_receipt.jpg /tmp/sha1.png \
         photo2_lowlight_receipt.jpg /tmp/sha2.png \
         photo3_lowlight_receipt.jpg /tmp/sha3.png \
         /tmp/sig.png 2>> "$ERROR_LOG"; then
-        log_error "Failed to print strip 1"
-    fi
-    
-    # Print Strip 2: Auto/normal versions with SHAs
-    log_both "Printing strip 2 (auto)..."
-    if ! python "$PRINTER_LIB/scripts/imgprint.py" \
-        photo1_auto_receipt.jpg /tmp/sha1.png \
-        photo2_auto_receipt.jpg /tmp/sha2.png \
-        photo3_auto_receipt.jpg /tmp/sha3.png \
-        /tmp/sig.png 2>> "$ERROR_LOG"; then
-        log_error "Failed to print strip 2"
-    fi
-    
-    # Print Strip 3: Bright light versions with SHAs
-    log_both "Printing strip 3 (bright)..."
-    if ! python "$PRINTER_LIB/scripts/imgprint.py" \
-        photo1_bright_receipt.jpg /tmp/sha1.png \
-        photo2_bright_receipt.jpg /tmp/sha2.png \
-        photo3_bright_receipt.jpg /tmp/sha3.png \
-        /tmp/sig.png 2>> "$ERROR_LOG"; then
-        log_error "Failed to print strip 3"
+        log_error "Failed to print strip"
     fi
     
     log_both "=== SESSION COMPLETE: $(date '+%Y-%m-%d %H:%M:%S') ==="
