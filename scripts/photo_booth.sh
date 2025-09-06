@@ -96,62 +96,72 @@ img.save('/tmp/test_print.png')
     fi
 }
 
-# Check printer on startup
-echo ""
-echo "=== PHOTO BOOTH STARTUP CHECK ==="
-echo ""
-
+# Initialize printer check flag
+PRINTER_CHECKED=0
 PRINTER_READY=0
-MAX_RETRIES=3
-RETRY_COUNT=0
 
-while [ $PRINTER_READY -eq 0 ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if check_printer; then
-        if test_printer; then
-            PRINTER_READY=1
-            echo ""
-            echo "=== PRINTER READY ==="
-            echo ""
-        else
-            echo ""
-            echo "Printer found but not responding. Retrying in 3 seconds..."
-            sleep 3
-        fi
-    else
-        echo ""
-        echo "Retry $((RETRY_COUNT + 1)) of $MAX_RETRIES"
-        echo "Waiting 5 seconds before retry..."
-        echo ""
-        sleep 5
+# Function to ensure printer is ready (called on first photo)
+ensure_printer_ready() {
+    if [ $PRINTER_CHECKED -eq 1 ] && [ $PRINTER_READY -eq 1 ]; then
+        return 0
     fi
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-done
-
-if [ $PRINTER_READY -eq 0 ]; then
+    
     echo ""
-    echo "=== PRINTER NOT AVAILABLE ==="
-    echo "The photo booth cannot start without a printer."
-    echo ""
-    echo "Troubleshooting steps:"
-    echo "1. Check printer power and LED status"
-    echo "2. Unplug USB cable from Pi, wait 5 seconds, reconnect"
-    echo "3. Run: lsusb | grep -i epson"
-    echo "4. Run: ls -la /dev/usb/"
-    echo "5. Try: sudo modprobe usblp"
-    echo ""
-    echo "Press Ctrl+C to exit and fix the issue."
+    echo "=== CHECKING PRINTER CONNECTION ==="
     echo ""
     
-    # Wait for user to fix it
-    while [ $PRINTER_READY -eq 0 ]; do
-        echo "Press ENTER to retry printer detection..."
-        read
-        if check_printer && test_printer; then
-            PRINTER_READY=1
-            echo "✓ Printer now ready!"
+    local MAX_RETRIES=3
+    local RETRY_COUNT=0
+    
+    while [ $PRINTER_READY -eq 0 ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if check_printer; then
+            if test_printer; then
+                PRINTER_READY=1
+                PRINTER_CHECKED=1
+                echo ""
+                echo "=== PRINTER READY ==="
+                echo ""
+                return 0
+            else
+                echo ""
+                echo "Printer found but not responding. Retrying in 3 seconds..."
+                sleep 3
+            fi
+        else
+            echo ""
+            echo "Retry $((RETRY_COUNT + 1)) of $MAX_RETRIES"
+            echo "Waiting 5 seconds before retry..."
+            echo ""
+            sleep 5
         fi
+        RETRY_COUNT=$((RETRY_COUNT + 1))
     done
-fi
+    
+    if [ $PRINTER_READY -eq 0 ]; then
+        echo ""
+        echo "=== PRINTER NOT AVAILABLE ==="
+        echo ""
+        echo "Troubleshooting steps:"
+        echo "1. Check printer power and LED status"
+        echo "2. Unplug USB cable from Pi, wait 5 seconds, reconnect"
+        echo "3. If camera is using USB, try a different USB port"
+        echo "4. Run: lsusb | grep -i epson"
+        echo "5. Run: ls -la /dev/usb/"
+        echo ""
+        
+        # Wait for user to fix it
+        while [ $PRINTER_READY -eq 0 ]; do
+            echo "Press ENTER to retry printer detection..."
+            read
+            if check_printer && test_printer; then
+                PRINTER_READY=1
+                PRINTER_CHECKED=1
+                echo "✓ Printer now ready!"
+                return 0
+            fi
+        done
+    fi
+}
 
 # Function to print processing log strip (for verbose mode)
 print_processing_log() {
@@ -527,7 +537,14 @@ trap cleanup_and_exit SIGINT SIGTERM
 trap 'handle_error "Script error on line $LINENO"' ERR
 
 # Main loop
-print_text "READY - PRESS ENTER TO TAKE PHOTO"
+echo ""
+echo "==================================="
+echo "    PHOTO BOOTH READY TO START"
+echo "==================================="
+echo ""
+echo "Press ENTER to take photos"
+echo "(Printer will be checked on first use)"
+echo ""
 echo "Main loop started - waiting for user input" >> "$DEBUG_LOG"
 
 while true; do
@@ -541,6 +558,11 @@ while true; do
     log_both "Waiting for user input (ENTER)..."
     read
     log_both "User pressed ENTER at $(date)"
+    
+    # Check printer on first run or if it was disconnected
+    if [ $PRINTER_CHECKED -eq 0 ] || [ $PRINTER_READY -eq 0 ]; then
+        ensure_printer_ready
+    fi
     
     # Countdown
     for i in 3 2 1; do
