@@ -813,16 +813,16 @@ while true; do
     log_both "SHA2: $SHA2"
     log_both "SHA3: $SHA3"
     
-    # Process photos - ONLY LOW LIGHT (first strip only)
-    log_both "Processing photos for low light..."
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg lowlight 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo1.jpg for lowlight"
+    # Process photos - AUTO/NORMAL lighting (best for most conditions)
+    log_both "Processing photos for auto lighting..."
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg auto 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo1.jpg for auto"
     fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg lowlight 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo2.jpg for lowlight"
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg auto 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo2.jpg for auto"
     fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg lowlight 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo3.jpg for lowlight"
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg auto 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo3.jpg for auto"
     fi
     
     DATE=$(date '+%Y-%m-%d %H:%M')
@@ -841,12 +841,12 @@ while true; do
         print_processing_log
     fi
     
-    # Print ONLY Strip 1: Low light versions with SHAs
+    # Print photo strip: Auto versions with SHAs
     log_both "Printing photo strip..."
     if ! python "$PRINTER_LIB/scripts/imgprint.py" \
-        photo1_lowlight_receipt.jpg /tmp/sha1.png \
-        photo2_lowlight_receipt.jpg /tmp/sha2.png \
-        photo3_lowlight_receipt.jpg /tmp/sha3.png \
+        photo1_auto_receipt.jpg /tmp/sha1.png \
+        photo2_auto_receipt.jpg /tmp/sha2.png \
+        photo3_auto_receipt.jpg /tmp/sha3.png \
         /tmp/sig.png 2>> "$ERROR_LOG"; then
         log_error "Failed to print strip"
     fi
