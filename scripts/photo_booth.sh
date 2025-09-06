@@ -700,10 +700,19 @@ while true; do
     cd "$(eval echo $PHOTO_DIR)"
     log_both "Changed to photo directory: $(pwd)"
     
+    # Delete old photos to ensure we get new ones
+    rm -f photo1.jpg photo2.jpg photo3.jpg
+    rm -f photo*_*_receipt.jpg
+    log_both "Cleared old photos"
+    
+    # Add delay for camera to initialize after USB swap
+    echo "Initializing camera..."
+    sleep 2
+    
     # Take all 3 photos with different settings
     log_both "Taking photo 1..."
     echo "Taking photo 1..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo1.jpg - check camera connection!"
         log_error "Failed to capture photo1.jpg: $CAMERA_ERROR"
@@ -720,7 +729,8 @@ while true; do
     
     log_both "Taking photo 2..."
     echo "Taking photo 2..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
+    sleep 0.5  # Small delay between shots
+    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo2.jpg - check camera connection!"
         log_error "Failed to capture photo2.jpg: $CAMERA_ERROR"
@@ -737,7 +747,8 @@ while true; do
     
     log_both "Taking photo 3..."
     echo "Taking photo 3..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
+    sleep 0.5  # Small delay between shots
+    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo3.jpg - check camera connection!"
         log_error "Failed to capture photo3.jpg: $CAMERA_ERROR"
