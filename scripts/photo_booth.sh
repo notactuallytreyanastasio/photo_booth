@@ -73,6 +73,8 @@ check_printer() {
 # Function to test printer with small print
 test_printer() {
     echo "Testing printer connection..."
+    
+    # Create test image
     python3 -c "
 from PIL import Image, ImageDraw, ImageFont
 img = Image.new('L', (576, 40), 255)
@@ -83,15 +85,41 @@ except:
     font = ImageFont.load_default()
 draw.text((10, 10), 'Printer Test OK - $(date +%H:%M:%S)', font=font, fill=0)
 img.save('/tmp/test_print.png')
-" 2>/dev/null
+"
     
-    if python "$PRINTER_LIB/scripts/imgprint.py" /tmp/test_print.png 2>/dev/null; then
+    # Check if test image was created
+    if [ ! -f /tmp/test_print.png ]; then
+        echo "✗ Failed to create test image"
+        return 1
+    fi
+    
+    # Try to print with full error output
+    echo "Attempting to print test image..."
+    if python "$PRINTER_LIB/scripts/imgprint.py" /tmp/test_print.png 2>&1; then
         echo "✓ Printer test successful" 
         echo "Printer test successful" >> "$DEBUG_LOG"
         return 0
     else
-        echo "✗ Printer test failed"
-        echo "Printer test failed" >> "$DEBUG_LOG"
+        PRINT_ERROR=$?
+        echo "✗ Printer test failed (exit code: $PRINT_ERROR)"
+        echo "Printer test failed with code $PRINT_ERROR" >> "$DEBUG_LOG"
+        
+        # Try alternative print methods
+        echo "Checking printer device nodes..."
+        ls -la /dev/usb/lp* 2>/dev/null || echo "No /dev/usb/lp* devices found"
+        ls -la /dev/usblp* 2>/dev/null || echo "No /dev/usblp* devices found"
+        
+        # Check if we can write directly to printer
+        if [ -c /dev/usb/lp0 ]; then
+            echo "Found /dev/usb/lp0 - checking write permission..."
+            if [ -w /dev/usb/lp0 ]; then
+                echo "Write permission OK"
+            else
+                echo "No write permission - may need sudo or user group adjustment"
+                echo "Try: sudo usermod -a -G lp $USER"
+            fi
+        fi
+        
         return 1
     fi
 }
@@ -561,6 +589,20 @@ while true; do
     
     # Check printer on first run or if it was disconnected
     if [ $PRINTER_CHECKED -eq 0 ] || [ $PRINTER_READY -eq 0 ]; then
+        echo ""
+        echo "==================================="
+        echo "     SWAP TO PRINTER NOW!"
+        echo "==================================="
+        echo ""
+        echo "You have 5 seconds to:"
+        echo "1. Unplug camera USB"
+        echo "2. Plug in printer USB"
+        echo ""
+        for i in 5 4 3 2 1; do
+            echo "  Starting printer check in $i..."
+            sleep 1
+        done
+        echo ""
         ensure_printer_ready
     fi
     
@@ -736,6 +778,18 @@ while true; do
     fi
     
     log_both "=== SESSION COMPLETE: $(date '+%Y-%m-%d %H:%M:%S') ==="
+    
+    # Give time to swap back to camera if needed
+    if [ $PRINTER_CHECKED -eq 1 ]; then
+        echo ""
+        echo "==================================="
+        echo "     PHOTOS PRINTED!"
+        echo "==================================="
+        echo ""
+        echo "You can now swap back to camera USB if needed"
+        echo "Waiting 3 seconds before ready..."
+        sleep 3
+    fi
     
     # Ready for next photo
     print_text "READY - PRESS ENTER TO TAKE PHOTO"
