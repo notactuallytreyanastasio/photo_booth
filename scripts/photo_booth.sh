@@ -23,6 +23,23 @@ DEBUG_LOG="/tmp/photo_booth_debug.log"
 ERROR_LOG="/tmp/photo_booth_error.log"
 SESSION_LOG="/tmp/photo_booth_session.log"
 
+# Debug path resolution
+echo "SCRIPT_DIR: $SCRIPT_DIR"
+echo "PHOTO_BOOTH_ROOT: $PHOTO_BOOTH_ROOT"
+echo "PRINTER_LIB: $PRINTER_LIB"
+echo "Looking for imgprint.py at: $PRINTER_LIB/scripts/imgprint.py"
+
+# Verify imgprint.py exists
+if [ ! -f "$PRINTER_LIB/scripts/imgprint.py" ]; then
+    echo "ERROR: imgprint.py not found at $PRINTER_LIB/scripts/imgprint.py"
+    echo "Contents of $PRINTER_LIB/scripts/:"
+    ls -la "$PRINTER_LIB/scripts/" 2>/dev/null || echo "Directory not found"
+    
+    # Try to find it
+    echo "Searching for imgprint.py..."
+    find ~ -name "imgprint.py" 2>/dev/null | head -5
+fi
+
 # Create photo directory if it doesn't exist
 mkdir -p "$(eval echo $PHOTO_DIR)"
 
