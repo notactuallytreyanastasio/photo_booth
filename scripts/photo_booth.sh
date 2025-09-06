@@ -11,44 +11,29 @@ if [ "$1" = "v" ]; then
 fi
 
 # Configuration
-# Get the script's parent directory (photo_booth root)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHOTO_BOOTH_ROOT="$(dirname "$SCRIPT_DIR")"
+# Hard-code the photo_booth location since auto-detection is failing
+PHOTO_BOOTH_ROOT="/home/pi/photo_booth"
 
-# Debug environment variable
-if [ ! -z "$PRINTER_LIB" ]; then
-    echo "WARNING: PRINTER_LIB is already set in environment to: $PRINTER_LIB"
+# Verify it exists
+if [ ! -d "$PHOTO_BOOTH_ROOT" ]; then
+    echo "ERROR: photo_booth not found at $PHOTO_BOOTH_ROOT"
+    echo "Searching for photo_booth directory..."
+    find ~ -type d -name "photo_booth" 2>/dev/null | head -3
+    exit 1
 fi
 
-# Set paths relative to photo_booth installation
+# Set paths
 PHOTO_DIR="${PHOTO_DIR:-~/pics}"
-# Force PRINTER_LIB to be the photo_booth root, ignore environment variable for now
 PRINTER_LIB="$PHOTO_BOOTH_ROOT"
 VIRTUAL_ENV="${VIRTUAL_ENV:-~/myenv}"
 DEBUG_LOG="/tmp/photo_booth_debug.log"
 ERROR_LOG="/tmp/photo_booth_error.log"
 SESSION_LOG="/tmp/photo_booth_session.log"
 
-# Debug path resolution
-echo "=== PATH DEBUG ==="
-echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"
-echo "dirname: $(dirname "${BASH_SOURCE[0]}")"
-echo "pwd: $(pwd)"
-echo "SCRIPT_DIR: $SCRIPT_DIR"
-echo "PHOTO_BOOTH_ROOT: $PHOTO_BOOTH_ROOT"
-echo "PRINTER_LIB: $PRINTER_LIB"
-echo "Looking for imgprint.py at: $PRINTER_LIB/scripts/imgprint.py"
-echo "=================="
-
 # Verify imgprint.py exists
 if [ ! -f "$PRINTER_LIB/scripts/imgprint.py" ]; then
     echo "ERROR: imgprint.py not found at $PRINTER_LIB/scripts/imgprint.py"
-    echo "Contents of $PRINTER_LIB/scripts/:"
-    ls -la "$PRINTER_LIB/scripts/" 2>/dev/null || echo "Directory not found"
-    
-    # Try to find it
-    echo "Searching for imgprint.py..."
-    find ~ -name "imgprint.py" 2>/dev/null | head -5
+    exit 1
 fi
 
 # Create photo directory if it doesn't exist
@@ -123,10 +108,6 @@ img.save('/tmp/test_print.png')
     
     # Try to print with full error output
     echo "Attempting to print test image..."
-    echo "DEBUG: PRINTER_LIB = $PRINTER_LIB"
-    echo "DEBUG: Full path = $PRINTER_LIB/scripts/imgprint.py"
-    echo "DEBUG: Checking if file exists..."
-    ls -la "$PRINTER_LIB/scripts/imgprint.py" 2>&1
     
     if python "$PRINTER_LIB/scripts/imgprint.py" /tmp/test_print.png 2>&1; then
         echo "✓ Printer test successful" 
