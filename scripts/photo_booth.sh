@@ -730,7 +730,7 @@ while true; do
     # Take all 3 photos with different settings
     log_both "Taking photo 1..."
     echo "Taking photo 1..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto --ev 2.0 --shutter 50000 2>&1 | tee /tmp/camera_error.txt; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo1.jpg - check camera connection!"
         log_error "Failed to capture photo1.jpg: $CAMERA_ERROR"
@@ -748,7 +748,7 @@ while true; do
     log_both "Taking photo 2..."
     echo "Taking photo 2..."  # Echo to console
     sleep 1  # Longer delay between shots to let camera recover
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --ev 2.0 --contrast 1.5 --sharpness 1.5 --shutter 50000 2>&1 | tee /tmp/camera_error.txt; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo2.jpg - check camera connection!"
         log_error "Failed to capture photo2.jpg: $CAMERA_ERROR"
@@ -766,7 +766,7 @@ while true; do
     log_both "Taking photo 3..."
     echo "Taking photo 3..."  # Echo to console
     sleep 1  # Longer delay between shots to let camera recover
-    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev 1.5 --contrast 1.2 --shutter 40000 2>&1 | tee /tmp/camera_error.txt; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo3.jpg - check camera connection!"
         log_error "Failed to capture photo3.jpg: $CAMERA_ERROR"
@@ -813,8 +813,8 @@ while true; do
     log_both "SHA2: $SHA2"
     log_both "SHA3: $SHA3"
     
-    # Process photos - LOWLIGHT mode with enhanced exposure
-    log_both "Processing photos for lowlight mode..."
+    # Process photos - ONLY LOW LIGHT (first strip only)
+    log_both "Processing photos for low light..."
     if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg lowlight 2>> "$ERROR_LOG"; then
         log_error "Failed to process photo1.jpg for lowlight"
     fi
@@ -841,7 +841,7 @@ while true; do
         print_processing_log
     fi
     
-    # Print photo strip: Lowlight versions with SHAs
+    # Print ONLY Strip 1: Low light versions with SHAs
     log_both "Printing photo strip..."
     if ! python "$PRINTER_LIB/scripts/imgprint.py" \
         photo1_lowlight_receipt.jpg /tmp/sha1.png \
