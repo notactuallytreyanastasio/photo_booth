@@ -31,13 +31,15 @@ class ReceiptTypewriter:
             except:
                 self.font = ImageFont.load_default()
         
-        print("\n" + "="*50)
+        print("\n" + "="*64)
         print("    RECEIPT TYPEWRITER")
-        print("="*50)
+        print("="*64)
         print("\nType and press ENTER for new lines.")
         print("Press ENTER twice to print the section.")
         print("Press Ctrl+C to finish.\n")
-        print("-"*50 + "\n")
+        print("Line width guide (64 characters):")
+        print("1234567890" * 6 + "1234")  # 64 character ruler
+        print("-"*64 + "\n")
     
     def print_buffer(self):
         """Print all buffered lines without cutting"""
@@ -56,8 +58,8 @@ class ReceiptTypewriter:
         for line in self.buffer:
             # Handle long lines by wrapping
             if line:
-                # Calculate actual width with bigger font
-                max_chars = 48  # Approximate chars that fit with bigger font
+                # Calculate actual width with bigger font - now allowing more chars
+                max_chars = 64  # 16 more characters (was 48)
                 while len(line) > max_chars:
                     # Find last space before limit
                     wrap_point = line[:max_chars].rfind(' ')
