@@ -813,16 +813,16 @@ while true; do
     log_both "SHA2: $SHA2"
     log_both "SHA3: $SHA3"
     
-    # Process photos - AUTO/NORMAL lighting (best for most conditions)
-    log_both "Processing photos for auto lighting..."
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo1.jpg for auto"
+    # Process photos - BRIGHT mode (for dim/low-light environments)
+    log_both "Processing photos for bright mode (low-light compensation)..."
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo1.jpg bright 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo1.jpg for bright"
     fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo2.jpg for auto"
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo2.jpg bright 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo2.jpg for bright"
     fi
-    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg auto 2>> "$ERROR_LOG"; then
-        log_error "Failed to process photo3.jpg for auto"
+    if ! python "$PRINTER_LIB/image_processing/adaptive_dither.py" photo3.jpg bright 2>> "$ERROR_LOG"; then
+        log_error "Failed to process photo3.jpg for bright"
     fi
     
     DATE=$(date '+%Y-%m-%d %H:%M')
@@ -841,12 +841,12 @@ while true; do
         print_processing_log
     fi
     
-    # Print photo strip: Auto versions with SHAs
+    # Print photo strip: Bright versions with SHAs
     log_both "Printing photo strip..."
     if ! python "$PRINTER_LIB/scripts/imgprint.py" \
-        photo1_auto_receipt.jpg /tmp/sha1.png \
-        photo2_auto_receipt.jpg /tmp/sha2.png \
-        photo3_auto_receipt.jpg /tmp/sha3.png \
+        photo1_bright_receipt.jpg /tmp/sha1.png \
+        photo2_bright_receipt.jpg /tmp/sha2.png \
+        photo3_bright_receipt.jpg /tmp/sha3.png \
         /tmp/sig.png 2>> "$ERROR_LOG"; then
         log_error "Failed to print strip"
     fi
