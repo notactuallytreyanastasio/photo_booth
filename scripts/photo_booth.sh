@@ -705,14 +705,28 @@ while true; do
     rm -f photo*_*_receipt.jpg
     log_both "Cleared old photos"
     
-    # Add delay for camera to initialize after USB swap
+    # Reset camera module to clear any bad state
+    echo "Resetting camera module..."
+    # Try to reset V4L2 devices
+    sudo modprobe -r bcm2835-v4l2 2>/dev/null
+    sudo modprobe -r bcm2835-isp 2>/dev/null
+    sleep 1
+    sudo modprobe bcm2835-v4l2 2>/dev/null
+    sudo modprobe bcm2835-isp 2>/dev/null
+    
+    # Kill any stuck camera processes
+    pkill -f rpicam 2>/dev/null
+    pkill -f libcamera 2>/dev/null
+    sleep 1
+    
+    # Add delay for camera to initialize after reset
     echo "Initializing camera..."
-    sleep 2
+    sleep 3
     
     # Take all 3 photos with different settings
     log_both "Taking photo 1..."
     echo "Taking photo 1..."  # Echo to console
-    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo1.jpg --awb auto 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo1.jpg - check camera connection!"
         log_error "Failed to capture photo1.jpg: $CAMERA_ERROR"
@@ -729,8 +743,8 @@ while true; do
     
     log_both "Taking photo 2..."
     echo "Taking photo 2..."  # Echo to console
-    sleep 0.5  # Small delay between shots
-    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
+    sleep 1  # Longer delay between shots to let camera recover
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo2.jpg --awb auto --contrast 1.5 --sharpness 1.5 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo2.jpg - check camera connection!"
         log_error "Failed to capture photo2.jpg: $CAMERA_ERROR"
@@ -747,8 +761,8 @@ while true; do
     
     log_both "Taking photo 3..."
     echo "Taking photo 3..."  # Echo to console
-    sleep 0.5  # Small delay between shots
-    if ! rpicam-jpeg --nopreview --immediate --timeout 2000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
+    sleep 1  # Longer delay between shots to let camera recover
+    if ! rpicam-jpeg --nopreview --immediate --timeout 1000 --output photo3.jpg --awb auto --ev -0.5 --contrast 1.2 2>&1 | tee /tmp/camera_error.txt; then
         CAMERA_ERROR=$(cat /tmp/camera_error.txt)
         echo "ERROR: Failed to capture photo3.jpg - check camera connection!"
         log_error "Failed to capture photo3.jpg: $CAMERA_ERROR"
